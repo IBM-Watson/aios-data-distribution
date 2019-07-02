@@ -13,7 +13,15 @@ Users are expected to author custom score functions that needs to be supplied as
     * The number of entries in each element of this array should be same as the unique class labels of the dataset 
     * **Example:** probability numpy array: [[50,20,15,15] , [60,10,5,25], .......]
 
-### WML Model Engine:
+### Contents
+- [WML Model Engine](#WML)
+- [Azure Model Engine](#Azure)
+   * [Azure Studio](#AzureStudio)
+   * [Azure ML Service](#AzureMLService)
+- [AWS SageMaker Model Engine](#AWS)
+- [Custom Model Engine](#Custom)
+
+## WML Model Engine: <a name="WML"></a>
 This section provides the score function templates for model deployed in WML. There are 2 formats specified (local model , online model) and user is free to choose any of the formats . **The templates specified below are common for binary / muticlass classification cases**.
   - **Format-1:** Using the local mode (where in model store in WML is loaded and scored locally)
    ```
@@ -106,7 +114,8 @@ This section provides the score function templates for model deployed in WML. Th
         
         return probability_array, prediction_vector
  ```
-### Azure Model Engine:
+## Azure Model Engine: <a name="Azure"></a>
+### Azure Studio: <a name="AzureStudio"></a>
 This section provides the score function templates for model deployed in Azure Model Engine. User needs to consider that online scoring endpoints of Azure Studio will be used. **As this is online scoring, a cost is associated with the same .**
 
 - **Case-1: Binary Classifier**
@@ -211,7 +220,42 @@ def score(training_data_frame):
     return probability_array, predicted_vector
 ```
 
-### AWS Model Engine:
+### Azure ML Service: <a name="AzureMLService"></a>
+This section provides the score function templates for model deployed in Azure ML Service. User needs to consider that online scoring endpoints of Azure ML Service will be used. The below snippet is valid for both multiclass and binary classfication model. **As this is online scoring, a cost is associated with the same .**
+
+- **Format-1: Online Mode**
+ ```
+   def score(training_data_frame):
+    az_scoring_uri = <EDIT THIS>
+    api_key = <DEPLOYMENT API KEY>
+    
+    headers = {'Content-Type':'application/json',  'Authorization':('Bearer '+ api_key)} 
+    
+    input_values = training_data_frame.values.tolist()
+    feature_cols = list(training_data_frame.columns)
+    scoring_data = [{field: value  for field,value in zip(feature_cols, input_value)} for input_value in input_values]
+    
+    payload = {
+     "input": scoring_data
+    }
+    
+    import requests
+    import json
+    import numpy as np
+    import time
+    
+    start_time = time.time()  
+    response = requests.post(az_scoring_uri, json=payload, headers=headers)
+    response_time = int((time.time() - start_time)*1000)
+    
+    response_dict = json.loads(response.json())
+    results = response_dict['output']
+    prediction_vector = np.array([x["Scored Labels"] for x in results])
+    probability_array = np.array([x["Scored Probabilities"] for x in results])
+    return probability_array, prediction_vector
+ ```
+
+## AWS SageMaker Model Engine: <a name="AWS"></a>
 This section provides the score function templates for for model deployed in SageMaker Model Engine. User needs to consider that online scoring endpoints of SageMaker will be used.**As this is online scoring, a cost is associated with the same .** Please note that we are the below snipets are created with a assumption that input datasets for AWS are **one hot encoded for categorical columns** and label-encoded for **label column**
 
 - **Case-1: Binary Classifier**
@@ -243,7 +287,7 @@ def score(training_data_frame):
     import json
     import boto3
 
-    runtime = boto3.client('sagemaker-runtime', region_name=region, aws_access_key_id=access_id, aws_secret_access_key=access_key)
+    runtime = boto3.client('sagemaker-runtime', region_name=region, aws_access_key_id=access_id, aws_secret_access_key=secret_key)
     start_time = time.time()
 
     response = runtime.invoke_endpoint(EndpointName=endpoint_name, ContentType='text/csv', Body=payload_data)
@@ -300,7 +344,7 @@ def score(training_data_frame):
     import json
     import boto3
 
-    runtime = boto3.client('sagemaker-runtime', region_name=region, aws_access_key_id=access_id, aws_secret_access_key=access_key)
+    runtime = boto3.client('sagemaker-runtime', region_name=region, aws_access_key_id=access_id, aws_secret_access_key=secret_key)
     start_time = time.time()
 
     response = runtime.invoke_endpoint(EndpointName=endpoint_name, ContentType='text/csv', Body=payload_data)
@@ -324,7 +368,7 @@ def score(training_data_frame):
     return probability_array, predicted_vector
 ```
 
-### Custom Model Engine:
+## Custom Model Engine: <a name="Custom"></a>
 This section provides the score function template for model deployed in a custom engine. The online scoring end point of custom engine will be used for scoring. The below snippets holds good for binary/multiclass. **As this is online scoring, a cost is associated with the same .**
 
  ```
@@ -381,4 +425,3 @@ def score(training_data_frame):
 
     return probability_array,prediction_vector
  ```
-
