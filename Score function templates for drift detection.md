@@ -6,10 +6,12 @@ Users are expected to author custom score functions that needs to be supplied as
   - **training_data_frame :** Dataframe of the training data
 
 ### Output from score function:
- - **probability numpy array :** 
+ - **predicted label (aka decoded-target) numpy array :**
     * The data type of the values in this array should be same as dataset class label data type 
     * **Example :** predicted label numpy array : [A,B,C,D,A,B,D,......]
- - **predicted label (aka decoded-target) numpy array :** 
+    
+ 
+ - **probability numpy array :** 
     * The number of entries in each element of this array should be same as the unique class labels of the dataset 
     * **Example:** probability numpy array: [[50,20,15,15] , [60,10,5,25], .......]
 
