@@ -299,20 +299,18 @@ def score(training_data_frame):
     #Extract the details
     results = results_decoded['predictions']
 
-    #Find the winning label
-    predicted_label_0 = results[0]['predicted_label']
-    prob_0 = results[0]['score']
+    predicted_label_list = []
+    score_prob_list = []
 
-    is_winning_label = True
-    if prob_0 < 0.5:
-        is_winning_label = False
-
-
-    output = [[value['predicted_label'], 1 - float(value['score']) if (value["predicted_label"] == predicted_label_0 and  not is_winning_label) else float(value['score'])] for value in results]
+    for result in results :
+        predicted_label_list.append(result['predicted_label'])
+        
+        #To be noted that probability always to beloing to the same class label
+        score_prob_list.append(result['score'])
 
     import numpy as np
-    predicted_vector = np.array([value[0] for value in output])
-    probability_array = np.array([[value[1],1-value[1]] for value in output])
+    predicted_vector = np.array(predicted_label_list)
+    probability_array = np.array([[prob, 1-prob] for prob in score_prob_list])
 
     return probability_array, predicted_vector
 ```
