@@ -21,6 +21,7 @@ Users are expected to author custom score functions that needs to be supplied as
    * [Azure Studio](#AzureStudio)
    * [Azure ML Service](#AzureMLService)
 - [AWS SageMaker Model Engine](#AWS)
+- [SPSS Model Engine](#SPSS)
 - [Custom Model Engine](#Custom)
 
 ## WML Model Engine: <a name="WML"></a>
@@ -367,6 +368,234 @@ def score(training_data_frame):
 
     return probability_array, predicted_vector
 ```
+## SPSS Model Engine: <a name="SPSS"></a>
+This section provides the score function template for model deployed in SPSS model engine. The online scoring end point of custom engine will be used for scoring. The below snippets holds good for binary/multiclass. **As this is online scoring, a cost is associated with the same .**
+
+- **Case-1: Binary Classifier**
+```
+SPSS_CREDENTIALS = {
+    "username": <EDIT THIS>,
+    "password": <EDIT THIS>
+}
+
+def score(training_data_frame):
+    #To be filled by the user - model scoring url
+    scoring_url = <EDIT THIS>
+
+    feature_columns = list(training_data_frame.columns)
+    training_data_rows = training_data_frame[feature_columns].values.tolist()
+
+    requestInputRow = []
+    for row in training_data_rows:
+        input_row = []
+        column_index = 0
+        for column_value in row:
+            column_name = feature_columns[column_index]
+            if column_name == training_data_info.get("class_label"):
+                column_index = column_index + 1
+                continue
+                
+            input_row.append({
+                "name": column_name,
+                "value": column_value
+            })
+            column_index = column_index + 1
+            
+        if not input_row:
+            continue
+            
+        requestInputRow.append({
+            "input": input_row
+        })
+
+    # "id" - Identifier for the scoring configuration being used to generate scores        
+    payload_scoring = {
+        "id": <EDIT THIS>,
+        "requestInputTable": [{
+            "requestInputRow": requestInputRow
+        }]
+    }
+
+    #Retain username and password for custom
+    username = SPSS_CREDENTIALS.get("username")
+    password =  SPSS_CREDENTIALS.get("password")
+
+    import requests
+    import time
+    import json
+    import numpy as np
+
+    start_time = time.time()
+    response = requests.post(scoring_url, json=payload_scoring, auth=(username, password))
+    response_time = int((time.time() - start_time)*1000)
+
+    if response.ok is False:
+        error_msg = "Scoring failed : " + str(response.status_code)
+        if response.content is not None:
+            error_msg = error_msg + ", " + response.content.decode("utf-8")
+        raise Exception(error_msg)
+
+    #Convert response to dict
+    score_predictions = json.loads(response.text)
+
+    #The data type of the label column and prediction column should be same .
+    #User needs to make sure that label column and prediction column array should have the same unique class labels
+    
+    # Assumes probability column starts with "$NC-" and tries to search in response on its own.
+    # If this is not the case, please edit and provide name of the probability column.
+    probability_column_name = [
+      item for item in score_predictions.get("columnNames")["name"] if item.startswith("$NC-")]
+    if len(probability_column_name) != 1:
+        raise Exception(
+          "Either no probability column found or more than one is found. Please specify probability column name.")
+    probability_column_name = probability_column_name[0]
+
+    # Assumes prediction column starts with "$N-" and tries to search in response on its own.
+    # If this is not the case, please edit and provide name of the prediction column.
+    prediction_column_name = [
+      item for item in score_predictions.get("columnNames")["name"] if item.startswith("$N-")]
+    if len(prediction_column_name) != 1:
+        raise Exception(
+          "Either no prediction column found or more than one is found. Please specify prediction column name.")
+    prediction_column_name = prediction_column_name[0]
+
+    prob_col_index = list(score_predictions.get("columnNames")["name"]).index(probability_column_name)
+    predict_col_index = list(score_predictions.get("columnNames")["name"]).index(prediction_column_name)
+
+    if prob_col_index < 0 or predict_col_index < 0:
+        raise Exception("Missing prediction/probability column in the scoring response")
+
+    probability_array = []
+    prediction_vector = []
+    response_first_prediction = None
+
+    for value in score_predictions.get("rowValues"):
+        if not response_first_prediction:
+            response_first_prediction = value["value"][predict_col_index]["value"]
+            
+        response_prediction = value["value"][predict_col_index]["value"]
+        response_probability = float(value["value"][prob_col_index]["value"])
+        
+        prediction_vector.append(response_prediction)
+        if response_prediction == response_first_prediction:
+            probability_array.append([response_probability, 1-response_probability])
+        else:
+            probability_array.append([1-response_probability, response_probability])
+    
+    probability_array = np.array(probability_array)
+    prediction_vector = np.array(prediction_vector)
+
+    return probability_array,prediction_vector
+ ```
+ 
+  - **Case-2: Multiclass Classifier**
+ ```
+SPSS_CREDENTIALS = {
+    "username": <EDIT THIS>,
+    "password": <EDIT THIS>
+}
+
+def score(training_data_frame):
+    #To be filled by the user - model scoring url
+    scoring_url = <EDIT THIS>
+
+    feature_columns = list(training_data_frame.columns)
+    training_data_rows = training_data_frame[feature_columns].values.tolist()
+
+    requestInputRow = []
+    for row in training_data_rows:
+        input_row = []
+        column_index = 0
+        for column_value in row:
+            column_name = feature_columns[column_index]
+            if column_name == training_data_info.get("class_label"):
+                column_index = column_index + 1
+                continue
+                
+            input_row.append({
+                "name": column_name,
+                "value": column_value
+            })
+            column_index = column_index + 1
+            
+        if not input_row:
+            continue
+            
+        requestInputRow.append({
+            "input": input_row
+        })
+
+    # "id" - Identifier for the scoring configuration being used to generate scores        
+    payload_scoring = {
+        "id": <EDIT_THIS>,
+        "requestInputTable": [{
+            "requestInputRow": requestInputRow
+        }]
+    }
+
+    #Retain username and password for custom
+    username = SPSS_CREDENTIALS.get("username")
+    password =  SPSS_CREDENTIALS.get("password")
+
+    import requests
+    import time
+    import json
+    import numpy as np
+
+    start_time = time.time()
+    response = requests.post(scoring_url, json=payload_scoring, auth=(username, password))
+    response_time = int((time.time() - start_time)*1000)
+
+    if response.ok is False:
+        error_msg = "Scoring failed : " + str(response.status_code)
+        if response.content is not None:
+            error_msg = error_msg + ", " + response.content.decode("utf-8")
+        raise Exception(error_msg)
+
+    #Convert response to dict
+    score_predictions = json.loads(response.text)
+    
+    #The data type of the label column and prediction column should be same .
+    #User needs to make sure that label column and prediction column array should have the same unique class labels
+
+    # Assumes probability columns starts with "$NP-" and tries to search in response on its own.
+    # If this is not the case, please edit and provide name of the probability columns.
+    probability_column_names = [item for item in score_predictions.get("columnNames")["name"] if item.startswith("$NP-")]
+    if len(probability_column_names) == 0:
+        raise Exception("No probability column found. Please specify probability column name.")
+    
+    # Assumes prediction column starts with "$N-" and tries to search in response on its own.
+    # If this is not the case, please edit and provide name of the prediction column.
+    prediction_column_name = [item for item in score_predictions.get("columnNames")["name"] if item.startswith("$N-")]
+    if len(prediction_column_name) != 1:
+        raise Exception("Either no prediction column found or more than one is found. Please specify prediction column name.")
+    prediction_column_name = prediction_column_name[0]
+
+    prob_col_indexes = [list(score_predictions.get("columnNames")["name"]).index(prob_col_name) for prob_col_name in probability_column_names]
+    predict_col_index = list(score_predictions.get("columnNames")["name"]).index(prediction_column_name)
+
+    if len(prob_col_indexes) == 0 or predict_col_index < 0:
+        raise Exception("Missing prediction/probability column in the scoring response")
+
+    probability_array = []
+    prediction_vector = []
+
+    for value in score_predictions.get("rowValues"):
+        response_prediction = value["value"][predict_col_index]["value"]
+        prediction_vector.append(response_prediction)
+        
+        response_prob_array = []
+        for prob_col_index in prob_col_indexes:
+            response_prob_array.append(float(value["value"][prob_col_index]["value"]))
+            
+        probability_array.append(response_prob_array)
+        
+    import numpy as np
+    probability_array = np.array(probability_array)
+    prediction_vector = np.array(prediction_vector)
+
+    return probability_array,prediction_vector
+ ```
 
 ## Custom Model Engine: <a name="Custom"></a>
 This section provides the score function template for model deployed in a custom engine. The online scoring end point of custom engine will be used for scoring. The below snippets holds good for binary/multiclass. **As this is online scoring, a cost is associated with the same .**
