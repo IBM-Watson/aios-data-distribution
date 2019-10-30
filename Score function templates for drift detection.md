@@ -126,6 +126,7 @@ This section provides the score function templates for model deployed in WML. Th
  
 ### Online Scoring V4: <a name="OnlineScoringV4"></a>
 - **Format-3:** Using deployment_id and space_id . This snippet uses the online scoring endpoint of a WML model using WML V4 python client library. **As this is online scoring , a cost is associated with the same .**
+  **Note:**  This snippet is recommended to be used for CP4D env as on today.
 ```
 def score(training_data_frame):
      #To be filled by the user
