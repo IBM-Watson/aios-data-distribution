@@ -76,7 +76,7 @@ This section provides the score function templates for model deployed in WML. Th
 
 ```  
   *  _**Limitations for running in WML local mode:**_
-        - If a model is trained and deployed using WML Auto AI the local mode does not work as the right runtime used to traint he model is not known
+        - If a model is trained and deployed using WML Auto AI the local mode does not work as the right runtime used to train the model is not known
         - If a model is generated and deployed using WML Model Builder  - the local mode does not work as WML python client does not support this context.
         
 ### Online Scoring V3: <a name="OnlineScoringV3"></a>
