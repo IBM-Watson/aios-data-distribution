@@ -13,7 +13,8 @@ Users are expected to author custom score functions that needs to be supplied as
  
  - **probability numpy array :** 
     * The number of entries in each element of this array should be same as the unique class labels of the dataset 
-    * **Example:** probability numpy array: [[50,20,15,15] , [60,10,5,25], .......]
+    * Each element in the probability numpy array should be a vector with values between 0 and 1
+    * **Example:** probability numpy array: [[0.50,0.20,0.15,0.15] , [0.60,0.10,0.05,20.5], .......]
 
 ### Contents
 - [WML Model Engine](#WML)
