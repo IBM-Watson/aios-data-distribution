@@ -129,7 +129,7 @@ This section provides the score function templates for model deployed in WML. Th
 ### Online Scoring V4 For CP4D: <a name="OnlineScoringV4ForCP4D"></a>
 - **Format-3:** Using deployment_id and space_id . This snippet uses the online scoring endpoint of a WML model using WML V4 python client library. **As this is online scoring , a cost is associated with the same .**
 
-  **Note:**  This snippet is recommended to be used for CP4D env as on today.
+  **Note:**  This snippet is recommended to be used for CP4D env as on today. Please install python library "watson-machine-learning-client-V4" to execute below snippet.
 ```
 def score(training_data_frame):
      #To be filled by the user
@@ -178,7 +178,7 @@ def score(training_data_frame):
 ### Online Scoring V4 For Cloud: <a name="OnlineScoringV4ForCloud"></a>
 - **Format-4:** Using deployment_id and space_id . This snippet uses the online scoring endpoint of a WML model using WML V4 python client library. **As this is online scoring , a cost is associated with the same .**
 
-  **Note:**  This snippet is recommended to be used for Cloud env ONLY as on today. User is expected to install "ibm_watson_machine_learning" python library to use this snippet. 
+  **Note:**  This snippet is recommended to be used for Cloud env ONLY as on today. Please install "ibm_watson_machine_learning" python library to use below snippet. 
 ```
 def score(training_data_frame):
      #To be filled by the user
