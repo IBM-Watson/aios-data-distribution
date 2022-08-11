@@ -19,7 +19,6 @@ Users are expected to author custom score functions that needs to be supplied as
 ### Contents
 - [WML Model Engine](#WML)
    * [Local mode](#LocalMode)
-   * [Online Scoring for V3](#OnlineScoringV3)
    * [Online Scoring V4 for CP4D](#OnlineScoringV4ForCP4D)
    * [Online Scoring V4 for Cloud](#OnlineScoringV4ForCloud)
 - [Azure Model Engine](#Azure)
@@ -81,50 +80,6 @@ This section provides the score function templates for model deployed in WML. Th
         - If a model is trained and deployed using WML Auto AI the local mode does not work as the right runtime used to train the model is not known
         - If a model is generated and deployed using WML Model Builder  - the local mode does not work as WML python client does not support this context.
         
-### Online Scoring V3: <a name="OnlineScoringV3"></a>
- - **Format-2:** Using scoring-url . This snippet uses the online scoring endpoint of a WML model using WML V3 python client library . **As this is online scoring , a cost is associated with the same .**
-  ```
-      WML_CREDENTAILS = {
-             <EDIT THIS>
-    }
-
-    def score(training_data_frame):
-        #To be filled by the user
-        scoring_url = <EDIT_THIS>
-        
-        #The data type of the label column and prediction column should be same .
-        #User needs to make sure that label column and prediction column array should have the same unique class labels
-        prediction_column_name = <EDIT_THIS>
-        probability_column_name = <EDIT_THIS>
-        
-        feature_columns = list(training_data_frame.columns)
-        training_data_rows = training_data_frame[feature_columns].values.tolist()
-        
-        payload_scoring = {
-            "fields": feature_columns,
-            "values": [x for x in training_data_rows]
-        }
-        
-        probability_array = None
-        prediction_vector = None
-    
-        from watson_machine_learning_client import WatsonMachineLearningAPIClient
-        wml_client = WatsonMachineLearningAPIClient(WML_CREDENTAILS)
-        score_predictions = wml_client.deployments.score(scoring_url, payload_scoring)
-        
-        
-        prob_col_index = list(score_predictions.get('fields')).index(probability_column_name)
-        predict_col_index = list(score_predictions.get('fields')).index(prediction_column_name)
-        
-        if prob_col_index < 0 or predict_col_index < 0:
-            raise Exception("Missing prediction/probability column in the scoring response")
-            
-        import numpy as np
-        probability_array = np.array([value[prob_col_index] for value in score_predictions.get('values')])
-        prediction_vector = np.array([value[predict_col_index] for value in score_predictions.get('values')])
-        
-        return probability_array, prediction_vector
- ```
  
 ### Online Scoring V4 For CP4D: <a name="OnlineScoringV4ForCP4D"></a>
 - **Format-3:** Using deployment_id and space_id . This snippet uses the online scoring endpoint of a WML model using WML V4 python client library. **As this is online scoring , a cost is associated with the same .**
