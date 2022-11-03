@@ -37,20 +37,20 @@ def score(training_data_frame):
         <EDIT THIS>
     }
     try:
-        #Supply the model id
+        # Supply the model id
         model_id = <EDIT THIS>
         
-        #Retain feature columns from user selection
+        # Retain feature columns from user selection
         feature_columns = list(training_data_frame.columns)
         
-        #Load the WML model in local object
+        # Load the WML model in local object
         from ibm_watson_machine_learning import APIClient
 
         wml_client = APIClient(WML_CREDENTAILS)
         model = wml_client.repository.load(model_id)
         
-        #Predict the training data locally 
-        #Example of a spark based model ( the below set of lines to be customized based on model framework)
+        # Predict the training data locally 
+        # Example of a spark based model ( the below set of lines to be customized based on model framework)
         from pyspark.sql import SparkSession
         spark = SparkSession.builder.master("local").appName("drift").getOrCreate()
         spark_frame = spark.createDataFrame(training_data_frame)
@@ -80,9 +80,10 @@ def score(training_data_frame):
 ### Online Scoring: <a name="OnlineScoring"></a>
 - Using `deployment_id` and `space_id`. This snippet uses the online scoring endpoint of a WML model using IBM WML python client library. **As this is online scoring , a cost is associated with the same .**
 - **Note:** Please install python library "ibm_watson_machine_learning" to execute below snippet.
+- **Binary or Multiclass Classifier**
 ```
 def score(training_data_frame):
-    #To be filled by the user
+    # To be filled by the user
     WML_CREDENTAILS = {
         <EDIT THIS>
     }
@@ -90,14 +91,16 @@ def score(training_data_frame):
         deployment_id = <EDIT THIS>
         space_id = <EDIT THIS>
 
-        #The data type of the label column and prediction column should be same .
-        #User needs to make sure that label column and prediction column array should have the same unique class labels
+        # The data type of the label column and prediction column should be same .
+        # User needs to make sure that label column and prediction column array 
+        # should have the same unique class labels
+        # edit these if your prediction column has different name
         prediction_column_name = "prediction"
         probability_column_name = "probability"
 
         feature_columns = list(training_data_frame.columns)
         training_data_rows = training_data_frame[feature_columns].values.tolist()
-        #print(training_data_rows)
+        # print(training_data_rows)
 
         from ibm_watson_machine_learning import APIClient
         wml_client = WatsonMachineLearningAPIClient(WML_CREDENTAILS)
@@ -128,6 +131,50 @@ def score(training_data_frame):
         raise Exception("Scoring failed. Error: {}".format(str(ex)))
 ```
 
+- **Regression**
+```
+def score(training_data_frame):
+    # To be filled by the user
+    WML_CREDENTAILS = {
+        <EDIT THIS>
+    }
+    try:
+        deployment_id = <EDIT THIS>
+        space_id = <EDIT THIS>
+
+        # edit this if your prediction column has different name
+        prediction_column_name = "prediction"
+
+        feature_columns = list(training_data_frame.columns)
+        training_data_rows = training_data_frame[feature_columns].values.tolist()
+        # print(training_data_rows)
+
+        from ibm_watson_machine_learning import APIClient
+        wml_client = WatsonMachineLearningAPIClient(WML_CREDENTAILS)
+        wml_client.set.default_space(space_id)
+
+        payload_scoring = {
+            wml_client.deployments.ScoringMetaNames.INPUT_DATA: [{
+                "fields": feature_columns,
+                "values": [x for x in training_data_rows]
+            }]
+        }
+
+        score = wml_client.deployments.score(deployment_id, payload_scoring)
+        score_predictions = score.get('predictions')[0]
+
+        predict_col_index = list(score_predictions.get('fields')).index(prediction_column_name)
+        if predict_col_index < 0:
+            raise Exception("Missing prediction column in the scoring response")
+            
+        import numpy as np
+        prediction_vector = np.array([value[predict_col_index] for value in score_predictions.get('values')])
+
+        return prediction_vector
+    except Exception as ex:
+        raise Exception("Scoring failed. Error: {}".format(str(ex)))
+```
+
 ## Azure Model Engine: <a name="Azure"></a>
 ### Azure Studio: <a name="AzureStudio"></a>
 This section provides the score function templates for model deployed in Azure Model Engine. User needs to consider that online scoring endpoints of Azure Studio will be used. **As this is online scoring, a cost is associated with the same .**
@@ -138,7 +185,7 @@ def score(training_data_frame):
     azure_scoring_url = <REQUEST RESPONSE URL FROM AZURE MODEL>
     token = <PRIMARY_KEY FROM AZURE MODEL>
 
-    # edit these is your prediction and probability column have different names
+    # edit these if your prediction and probability column have different names
     prediction_column_name = "Scored Labels"
     probability_column_name = "Scored Probabilities"
 
@@ -146,7 +193,7 @@ def score(training_data_frame):
         input_values = training_data_frame.values.tolist()
         feature_columns = list(training_data_frame.columns)
 
-        #Payload
+        # Payload
         import requests
         from datetime import datetime, timedelta
 
@@ -186,7 +233,7 @@ def score(training_data_frame):
         # If your scoring response does not match above schema, 
         # please modify below code to extract prediction and probabilties array
 
-        #Extract results part
+        # Extract results part
         results = response.json()["Results"]["output1"]["value"]
 
         prob_col_index = list(results.get('ColumnNames')).index(probability_column_name)
@@ -195,7 +242,7 @@ def score(training_data_frame):
         if prob_col_index < 0 or predict_col_index < 0:
             raise Exception("Missing prediction/probability column in the scoring response")
 
-        #Get Score label from first entry
+        # Get Score label from first entry
         first_entry = results.get('Values')[0]
         score_label = first_entry[predict_col_index]
         print(score_label)
@@ -212,10 +259,10 @@ def score(training_data_frame):
         print(len(output))
 
         import numpy as np
-        #Construct predicted_label array
+        # Construct predicted_label array
         predicted_vector = np.array([value[0] for value in output])
 
-        #Construct probabilites array
+        # Construct probabilites array
         probability_array = np.array([[value[1],(1-value[1])] for value in output])
 
         return probability_array, predicted_vector
@@ -237,7 +284,7 @@ def score(training_data_frame):
         input_values = training_data_frame.values.tolist()
         feature_columns = list(training_data_frame.columns)
 
-        #Payload
+        # Payload
         import requests
         from datetime import datetime, timedelta
 
@@ -280,7 +327,7 @@ def score(training_data_frame):
         # If your scoring response does not match above schema, 
         # please modify below code to extract prediction and probabilties array
 
-        #Extract results
+        # Extract results
         results = response.json()["Results"]["output1"]["value"]
         result_column_names = list(results.get('ColumnNames'))
 
@@ -301,10 +348,10 @@ def score(training_data_frame):
             score_prob_list.append(score_prob_values)
 
         import numpy as np
-        #Construct predicted_label bucket
+        # Construct predicted_label bucket
         predicted_vector = np.array(score_label_list)
 
-        #Scored probabilities
+        # Scored probabilities
         probability_array = np.array(score_prob_list)
 
         return probability_array, predicted_vector
@@ -312,10 +359,86 @@ def score(training_data_frame):
         raise Exception("Scoring failed. {}".format(str(ex)))
 ```
 
+- **Regression**
+```
+def score(training_data_frame):
+    azure_scoring_url = <REQUEST RESPONSE URL FROM AZURE MODEL>
+    token = <PRIMARY_KEY FROM AZURE MODEL>
+
+    # edit this if your prediction has different names
+    prediction_column_name = "Scored Labels"
+
+    try:
+        input_values = training_data_frame.values.tolist()
+        feature_columns = list(training_data_frame.columns)
+
+        # Payload
+        import requests
+        from datetime import datetime, timedelta
+
+        payload = {
+            "Inputs": {
+                "input1": {
+                    "ColumnNames": feature_columns,
+                    "Values": input_values
+                }
+            },
+            "GlobalParameters": {}
+        }
+
+        headers = {'Authorization': 'Bearer ' + token}
+        start = datetime.utcnow()
+        response = requests.post(azure_scoring_url, json=payload, headers=headers)
+        if not response.ok:
+            raise Exception(str(response.content))
+
+        response_time = (datetime.utcnow() - start).total_seconds() * 1000
+        print(response_time)
+
+        # assumed response json structure
+        # {
+        #     "Results": {
+        #         "output1": {
+        #         "type": "DataTable",
+        #         "value": {
+        #             "ColumnNames": [
+        #             ],
+        #             "ColumnTypes": [
+        #             ],
+        #             "Values": [
+        #                 [],[]
+        #             ]
+        #         }
+        #         }
+        #     }
+        # }
+        # If your scoring response does not match above schema, 
+        # please modify below code to extract prediction and probabilties array
+
+        # Extract results
+        results = response.json()["Results"]["output1"]["value"]
+        result_column_names = list(results.get('ColumnNames'))
+
+        predict_col_index = result_column_names.index(prediction_column_name)
+
+        # Compute for all values
+        score_label_list = []
+        for value in results.get("Values"):
+            score_label_list.append(str(value[predict_col_index]))
+
+        import numpy as np
+        # Construct predicted_label bucket
+        predicted_vector = np.array(score_label_list)
+
+        return predicted_vector
+    except Exception as ex:
+        raise Exception("Scoring failed. {}".format(str(ex)))
+```
+
 ### Azure ML Service: <a name="AzureMLService"></a>
 This section provides the score function templates for model deployed in Azure ML Service. User needs to consider that online scoring endpoints of Azure ML Service will be used. The below snippet is valid for both multiclass and binary classfication model. **As this is online scoring, a cost is associated with the same .**
 
-- **Online Scoring**
+- **Binary or Multiclass Classifier**
 ```
 def score(training_data_frame):
     az_scoring_uri = <EDIT THIS>
@@ -379,19 +502,86 @@ def score(training_data_frame):
         for value in results:
             score_label_list.append(str(value[prediction_column_name]))
 
-            #Construct prob
+            # Construct probability array
             score_prob_values = [float(prob) for key,prob in value.items() \
                 if key.startswith(probability_column_prefix,0)]
             score_prob_list.append(score_prob_values)
 
         import numpy as np
-        #Construct predicted_label bucket
+        # Construct predicted_label bucket
         predicted_vector = np.array(score_label_list)
 
-        #Scored probabilities
+        # Scored probabilities
         probability_array = np.array(score_prob_list)
 
         return probability_array, prediction_vector
+    except Exception as ex:
+        raise Exception("Scoring failed. {}".format(str(ex)))
+```
+
+- **Regression**
+```
+def score(training_data_frame):
+    az_scoring_uri = <EDIT THIS>
+    api_key = <DEPLOYMENT API KEY>
+
+    # edit this if your prediction column has different name
+    prediction_column_name = "Scored Labels"
+
+    try:
+        input_values = training_data_frame.values.tolist()
+        feature_cols = list(training_data_frame.columns)
+        scoring_data = [{field: value  for field,value in zip(feature_cols, input_value)} for input_value in input_values]
+
+        payload = {
+            "Inputs": {
+                "input1": input1
+            },
+            "GlobalParameters": {}
+        }
+
+        import requests
+        import json
+        import numpy as np
+        import time
+
+        headers = {'Content-Type':'application/json',  'Authorization':('Bearer '+ api_key)}
+        start_time = time.time()  
+        response = requests.post(az_scoring_uri, json=payload, headers=headers)
+        if not response.ok:
+            raise Exception(str(response.content))
+
+        response_time = int((time.time() - start_time)*1000)
+        print(response_time)
+
+        # assumed response json structure
+        # {
+        #     "Results": {
+        #         "output1": [
+        #             {
+        #                 "feature_1": "feature_1_value",
+        #                 "feature_2": "feature_2_value",
+        #                 "Scored Labels": "prediction_value"
+        #             }
+        #         ]
+        #     }
+        # }
+        # If your scoring response does not match above schema, 
+        # please modify below code to extract prediction and probabilties array
+
+        response_dict = json.loads(response.json())
+        results = response_dict["Results"]["output1"]
+
+        # Compute for all values
+        score_label_list = []
+        for value in results:
+            score_label_list.append(str(value[prediction_column_name]))
+
+        import numpy as np
+        # Construct predicted_label bucket
+        predicted_vector = np.array(score_label_list)
+
+        return prediction_vector
     except Exception as ex:
         raise Exception("Scoring failed. {}".format(str(ex)))
 ```
@@ -408,7 +598,7 @@ def score(training_data_frame):
         "region": <EDIT THIS>
     }
 
-    #User input needed
+    # User input needed
     endpoint_name = <EDIT THIS>
 
     # edit these if your prediction and probability column have different names
@@ -420,14 +610,14 @@ def score(training_data_frame):
         secret_key = SAGEMAKER_CREDENTIALS.get('secret_access_key')
         region = SAGEMAKER_CREDENTIALS.get('region')
 
-        #Covert the training data frames to bytes
+        # Covert the training data frames to bytes
         import io
         import numpy as np
         train_df_bytes = io.BytesIO()
         np.savetxt(train_df_bytes, training_data_frame.values, delimiter=',', fmt='%g')
         payload_data = train_df_bytes.getvalue().decode().rstrip()
 
-        #Score the training data
+        # Score the training data
         import requests
         import time
         import json
@@ -443,7 +633,7 @@ def score(training_data_frame):
         response_time = int((time.time() - start_time)*1000)
         results_decoded = json.loads(response['Body'].read().decode())
 
-        #Extract the details
+        # Extract the details
         results = results_decoded['predictions']
 
         predicted_label_list = []
@@ -452,7 +642,7 @@ def score(training_data_frame):
         for result in results :
             predicted_label_list.append(result[prediction_column_name])
             
-            #To be noted that probability always to beloing to the same class label
+            # To be noted that probability always to beloing to the same class label
             score_prob_list.append(result[probability_column_name])
 
         import numpy as np
@@ -472,7 +662,7 @@ def score(training_data_frame):
         "secret_access_key": <EDIT THIS>,
         "region": <EDIT THIS>
     }
-    #User input needed
+    # User input needed
     endpoint_name = <EDIT THIS>
 
     # edit these if your prediction and probability column have different names
@@ -484,14 +674,14 @@ def score(training_data_frame):
         secret_key = SAGEMAKER_CREDENTIALS.get('secret_access_key')
         region = SAGEMAKER_CREDENTIALS.get('region')
         
-        #Convert the training data frames to bytes
+        # Convert the training data frames to bytes
         import io
         import numpy as np
         train_df_bytes = io.BytesIO()
         np.savetxt(train_df_bytes, training_data_frame.values, delimiter=',', fmt='%g')
         payload_data = train_df_bytes.getvalue().decode().rstrip()
 
-        #Score the training data
+        # Score the training data
         import requests
         import time
         import json
@@ -507,7 +697,7 @@ def score(training_data_frame):
         response_time = int((time.time() - start_time)*1000)
         results_decoded = json.loads(response['Body'].read().decode())
 
-        #Extract the details
+        # Extract the details
         results = results_decoded['predictions']
 
         predicted_vector_list = []
@@ -517,7 +707,7 @@ def score(training_data_frame):
             predicted_vector_list.append(value[prediction_column_name])
             probability_array_list.append(value[probability_column_name])
 
-        #Convert to numpy arrays
+        # Convert to numpy arrays
         probability_array = np.array(probability_array_list)
         predicted_vector = np.array(predicted_vector_list)
 
@@ -526,17 +716,74 @@ def score(training_data_frame):
         raise Exception("Scoring failed. {}".format(str(ex)))
 ```
 
+- **Regression**
+```
+def score(training_data_frame):
+    SAGEMAKER_CREDENTIALS = {
+        "access_key_id": <EDIT THIS>,
+        "secret_access_key": <EDIT THIS>,
+        "region": <EDIT THIS>
+    }
+    # User input needed
+    endpoint_name = <EDIT THIS>
+
+    # edit this if your prediction column has different name
+    prediction_column_name = "score"
+
+    try:
+        access_id = SAGEMAKER_CREDENTIALS.get('access_key_id')
+        secret_key = SAGEMAKER_CREDENTIALS.get('secret_access_key')
+        region = SAGEMAKER_CREDENTIALS.get('region')
+        
+        # Convert the training data frames to bytes
+        import io
+        import numpy as np
+        train_df_bytes = io.BytesIO()
+        np.savetxt(train_df_bytes, training_data_frame.values, delimiter=',', fmt='%g')
+        payload_data = train_df_bytes.getvalue().decode().rstrip()
+
+        # Score the training data
+        import requests
+        import time
+        import json
+        import boto3
+
+        runtime = boto3.client('sagemaker-runtime', region_name=region, aws_access_key_id=access_id, aws_secret_access_key=secret_key)
+        start_time = time.time()
+
+        response = runtime.invoke_endpoint(EndpointName=endpoint_name, ContentType='text/csv', Body=payload_data)
+        if not response.ok:
+            raise Exception(str(response.content))
+
+        response_time = int((time.time() - start_time)*1000)
+        results_decoded = json.loads(response['Body'].read().decode())
+
+        # Extract the details
+        results = results_decoded['predictions']
+
+        predicted_vector_list = []
+        for value in results:
+            predicted_vector_list.append(value[prediction_column_name])
+
+        # Convert to numpy arrays
+        predicted_vector = np.array(predicted_vector_list)
+
+        return predicted_vector
+    except Exception as ex:
+        raise Exception("Scoring failed. {}".format(str(ex)))
+```
+
 ## SPSS Model Engine: <a name="SPSS"></a>
 This section provides the score function template for model deployed in SPSS model engine. The online scoring end point of custom engine will be used for scoring. The below snippets holds good for binary/multiclass. **As this is online scoring, a cost is associated with the same .**
 
-- **Online Scoring**
+- **Binary or Multiclass Classifier**
 ```
 def score(training_data_frame):
     SPSS_CREDENTIALS = {
         "username": <EDIT THIS>,
         "password": <EDIT THIS>
     }
-    #To be filled by the user - model scoring url
+    # To be filled by the user - model scoring url
     scoring_url = <EDIT THIS>
     # "id" - Identifier for the scoring configuration being used to generate scores   
     scoring_id = <EDIT THIS>
@@ -558,7 +805,7 @@ def score(training_data_frame):
             }]
         }
 
-        #Retain username and password for custom
+        # Retain username and password for custom
         username = SPSS_CREDENTIALS.get("username")
         password =  SPSS_CREDENTIALS.get("password")
 
@@ -578,7 +825,7 @@ def score(training_data_frame):
         response_time = int((time.time() - start_time)*1000)
         print(response_time)
 
-        #Convert response to dict
+        # Convert response to dict
         score_predictions = json.loads(response.text)
         output_column_names = list(score_predictions.get("columnNames")["name"])
 
@@ -624,6 +871,85 @@ def score(training_data_frame):
         raise Exception("Scoring failed. {}".format(str(ex)))
 ```
 
+- **Regression**
+```
+def score(training_data_frame):
+    SPSS_CREDENTIALS = {
+        "username": <EDIT THIS>,
+        "password": <EDIT THIS>
+    }
+    # To be filled by the user - model scoring url
+    scoring_url = <EDIT THIS>
+    # "id" - Identifier for the scoring configuration being used to generate scores   
+    scoring_id = <EDIT THIS>
+
+    # edit this if your prediction column has different prefix
+    prediction_column_prefix = "$N-"
+
+    try:
+        feature_columns = list(training_data_frame.columns)
+        training_data_dict = training_data_frame.to_dict(orient="records")
+        request_input_row = [{"input": [{"name": key, "value": value} for key, value in json.items()]} \
+            for json in training_data_dict]
+
+        payload_scoring = {
+            "id": scoring_id,
+            "requestInputTable": [{
+                "requestInputRow": request_input_row
+            }]
+        }
+
+        # Retain username and password for custom
+        username = SPSS_CREDENTIALS.get("username")
+        password =  SPSS_CREDENTIALS.get("password")
+
+        import requests
+        import time
+        import json
+        import numpy as np
+
+        start_time = time.time()
+        response = requests.post(scoring_url, json=payload_scoring, auth=(username, password))
+        if not response.ok:
+            error_msg = "Scoring failed : " + str(response.status_code)
+            if response.content is not None:
+                error_msg = error_msg + ", " + response.content.decode("utf-8")
+            raise Exception(error_msg)
+
+        response_time = int((time.time() - start_time)*1000)
+        print(response_time)
+
+        # Convert response to dict
+        score_predictions = json.loads(response.text)
+        output_column_names = list(score_predictions.get("columnNames")["name"])
+
+        # identify prediction column name
+        prediction_column_name = [item for item in output_column_names \
+            if item.startswith(prediction_column_prefix)]
+        if len(prediction_column_name) != 1:
+            raise Exception(
+                "Either no prediction column found or more than one is found. Please specify prediction column name.")
+        prediction_column_name = prediction_column_name[0]
+
+        # identify prediction column index
+        predict_col_index = output_column_names.index(prediction_column_name)
+
+        if predict_col_index < 0:
+            raise Exception("Missing prediction column in the scoring response")
+
+        prediction_vector = []
+        for value in score_predictions.get("rowValues"):
+            response_prediction = value["value"][predict_col_index]["value"]
+            prediction_vector.append(response_prediction)
+
+        import numpy as np
+        prediction_vector = np.array(prediction_vector)
+
+        return prediction_vector
+    except Exception as ex:
+        raise Exception("Scoring failed. {}".format(str(ex)))
+```
+
 ## Custom Model Engine: <a name="Custom"></a>
 This section provides the score function template for model deployed in a custom engine. The online scoring end point of custom engine will be used for scoring. The below snippets holds good for binary/multiclass. **As this is online scoring, a cost is associated with the same .**
 
@@ -634,11 +960,12 @@ def score(training_data_frame):
         "username": <EDIT THIS>,
         "password": <EDIT THIS>
     }
-    #To be filled by the user - model scoring url
+    # To be filled by the user - model scoring url
     scoring_url = <EDIT THIS>
 
-    #The data type of the label column and prediction column should be same .
-    #User needs to make sure that label column and prediction column array should have the same unique class labels
+    # The data type of the label column and prediction column should be same .
+    # User needs to make sure that label column and prediction column array 
+    # should have the same unique class labels
     prediction_column_name = <EDIT THIS>
     probability_column_name = <EDIT THIS>
 
@@ -651,7 +978,7 @@ def score(training_data_frame):
             "values": [x for x in training_data_rows]
         }
 
-        #Retain username and password for custom
+        # Retain username and password for custom
         username = CUSTOM_ENGINE_CREDENTIALS.get("username")
         password =  CUSTOM_ENGINE_CREDENTIALS.get("password")
 
@@ -666,7 +993,7 @@ def score(training_data_frame):
         response_time = int((time.time() - start_time)*1000)
         print(response_time)
 
-        #Convert response to dict
+        # Convert response to dict
         import json
         score_predictions = json.loads(response.text)
 
